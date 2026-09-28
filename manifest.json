@@ -1,0 +1,10 @@
+{
+  "name":"Mijn Kookboek",
+  "short_name":"Kookboek",
+  "start_url":"./",
+  "display":"standalone",
+  "background_color":"#f7f3ec",
+  "theme_color":"#3d5a45",
+  "lang":"nl-BE",
+  "icons":[]
+}
