@@ -39,3 +39,9 @@ alter table meal_plan enable row level security;
 create policy "own recipes" on recipes for all using (auth.uid()=user_id) with check (auth.uid()=user_id);
 create policy "own shopping" on shopping_items for all using (auth.uid()=user_id) with check (auth.uid()=user_id);
 create policy "own plan" on meal_plan for all using (auth.uid()=user_id) with check (auth.uid()=user_id);
+
+-- Realtime voor automatische updates op andere toestellen.
+-- Als deze tabellen al in de publication staan, kun je deze 3 regels overslaan.
+alter publication supabase_realtime add table public.recipes;
+alter publication supabase_realtime add table public.shopping_items;
+alter publication supabase_realtime add table public.meal_plan;

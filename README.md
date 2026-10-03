@@ -1,33 +1,23 @@
-# Mijn Kookboek — eerste versie
+# Mijn Kookboek v2 — Supabase synchronisatie
 
-Dit is een eerste werkende PWA-prototype voor persoonlijk gebruik.
+Deze versie synchroniseert recepten, boodschappenlijst en weekplanning tussen Android en computer.
 
-## Wat werkt al
-- recepten bewaren/bewerken/verwijderen
-- zoeken en categorieën
-- favorieten
-- "gemaakt"
-- ingrediënten en bereiding
-- bron-URL
-- boodschappenlijst
-- weekplanning
-- responsive Android/desktop interface
-- installeren als PWA
-- lokale opslag in de browser
-- snelle tekst/URL-import als basis voor de latere AI-import
+## Eenmalige installatie
+
+1. Maak een gratis Supabase-project.
+2. Open in Supabase **SQL Editor** en voer `supabase-schema.sql` volledig uit.
+3. Zoek in Supabase bij **Project Settings → API** je Project URL en publieke **anon/publishable key**.
+4. Open `config.js` en vervang:
+   - `JOUW-PROJECT`
+   - `JOUW-PUBLIEKE-ANON-OF-PUBLISHABLE-KEY`
+5. Upload alle bestanden naar GitHub Pages en vervang de oude versie.
+6. Open de website. Maak een account aan met e-mail + wachtwoord.
+7. Gebruik op Android en computer hetzelfde account.
 
 ## Belangrijk
-De eerste versie bewaart de data lokaal in de browser. De meegeleverde `supabase-schema.sql` is de basis voor de online synchronisatie die we als volgende stap kunnen aansluiten.
+Gebruik alleen de publieke anon/publishable key in `config.js`. Zet NOOIT een `service_role` of andere geheime sleutel in de website.
 
-## Volgende stap
-1. Gratis Supabase-project aanmaken.
-2. `supabase-schema.sql` uitvoeren in SQL Editor.
-3. Frontend koppelen aan Supabase-auth/database.
-4. Deel-doel voor Android toevoegen.
-5. AI endpoint toevoegen voor:
-   - URL/caption -> recept
-   - screenshot -> OCR -> recept
-   - video/transcript -> recept
-6. Afbeeldingen opslaan in Supabase Storage.
+De eerste keer dat je inlogt worden de bestaande lokale recepten van dit apparaat naar Supabase gekopieerd als je Supabase-database nog leeg is.
 
-Gebruik voor productie nooit een AI API-key rechtstreeks in `app.js`; AI-calls moeten via een server-side/edge function lopen.
+## Opmerking
+De import van Instagram/Facebook/TikTok/YouTube en video-transcriptie is nog niet volledig automatisch. Dat is een aparte AI/import-stap die we daarna kunnen toevoegen.

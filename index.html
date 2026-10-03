@@ -9,12 +9,26 @@
   <title>Mijn Kookboek</title>
 </head>
 <body>
-  <header class="topbar">
-    <div><div class="eyebrow">persoonlijk digitaal kookboek</div><h1>Mijn Kookboek</h1></div>
-    <button id="addTop" class="primary">＋ Recept</button>
+  <header class="topbar" id="appHeader">
+    <div><div class="eyebrow">persoonlijk digitaal kookboek</div><h1>Mijn Kookboek</h1><div id="syncStatus" class="syncstatus">Niet verbonden</div></div>
+    <div class="topactions"><button id="logoutBtn" class="ghost">Uitloggen</button><button id="addTop" class="primary">＋ Recept</button></div>
   </header>
 
   <main>
+    <section id="auth" class="view active">
+      <div class="authbox">
+        <div class="eyebrow">online synchronisatie</div>
+        <h2>Mijn Kookboek</h2>
+        <p>Log in om je recepten op Android en computer automatisch te synchroniseren.</p>
+        <label>E-mail<input id="authEmail" type="email" autocomplete="email" placeholder="jij@example.com"></label>
+        <label>Wachtwoord<input id="authPassword" type="password" autocomplete="current-password" placeholder="Minstens 6 tekens"></label>
+        <div class="formactions">
+          <button id="loginBtn" class="primary">Inloggen</button>
+          <button id="signupBtn" class="ghost">Account maken</button>
+        </div>
+        <p id="authMsg" class="hint"></p>
+      </div>
+    </section>
     <section id="home" class="view active">
       <div class="hero">
         <div>
@@ -75,6 +89,8 @@
     <button data-nav="add">＋<span>Toevoegen</span></button>
   </nav>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
