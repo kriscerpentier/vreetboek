@@ -21,3 +21,9 @@ De eerste keer dat je inlogt worden de bestaande lokale recepten van dit apparaa
 
 ## Opmerking
 De import van Instagram/Facebook/TikTok/YouTube en video-transcriptie is nog niet volledig automatisch. Dat is een aparte AI/import-stap die we daarna kunnen toevoegen.
+
+
+## Android delen
+Voor "Delen → Mijn Kookboek" moet Mijn Kookboek als echte PWA worden geïnstalleerd, niet alleen als snelkoppeling.
+Verwijder de oude snelkoppeling/app op Android, open de website in Chrome en kies **Installeren** als die optie verschijnt.
+Na installatie verschijnt Mijn Kookboek als deeldoel voor links en tekst.
