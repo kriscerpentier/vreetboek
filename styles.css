@@ -9,3 +9,4 @@
 .syncstatus{font-size:.78rem;opacity:.7;margin-top:2px}
 body.loggedout #appHeader,body.loggedout main>.view:not(#auth),body.loggedout .bottomnav{display:none!important}
 body.loggedout #auth{display:block!important}
+.filebutton{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:.75rem 1rem;border:1px solid #ddd;border-radius:12px;background:#fff}

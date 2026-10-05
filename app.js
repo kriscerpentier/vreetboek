@@ -134,3 +134,50 @@ $("#signupBtn").onclick=async()=>{const email=$("#authEmail").value.trim(),passw
 $("#logoutBtn").onclick=async()=>{if(sb)await sb.auth.signOut();};
 
 authInit();
+
+// --- Import v3: Web Share Target, URL/text parsing and screenshot OCR ---
+function setImportStatus(msg){const e=$("#importStatus");if(e)e.textContent=msg||"";}
+function fillImportFromText(raw, sharedUrl=""){
+  const t=(raw||"").trim(); if(!t && !sharedUrl)return;
+  const url=(sharedUrl || (t.match(/https?:\/\/[^\s<>]+/i)||[""])[0]).trim();
+  let clean=t.replace(url,"").trim();
+  const ls=clean.split(/\n+/).map(x=>x.trim()).filter(Boolean);
+  const title=(ls.find(x=>!/^https?:\/\//i.test(x) && x.length>2)||"Nieuw recept").replace(/^#+\s*/,"").slice(0,100);
+  const ingredientRe=/^(?:[-•*]\s*)?(?:\d+(?:[.,]\d+)?\s*(?:x|g|kg|mg|ml|cl|dl|l|el|tl|eetlepel|theelepel|st|stuk|stuks|teentje|teentjes|snuf(?:je)?|pak|blik|zak|bos|handvol)\b|\d+(?:[.,]\d+)?\s*\S+)/i;
+  const sectionIng=ls.findIndex(x=>/^(ingrediënten|ingredients)\s*:??$/i.test(x));
+  const sectionStep=ls.findIndex(x=>/^(bereiding|bereidingswijze|instructies|instructions|method|methode)\s*:??$/i.test(x));
+  let ingredients=[];
+  if(sectionIng>=0){const end=sectionStep>sectionIng?sectionStep:ls.length;ingredients=ls.slice(sectionIng+1,end).filter(x=>x.length>1);}
+  if(!ingredients.length)ingredients=ls.filter(x=>ingredientRe.test(x)).slice(0,30);
+  let steps=[];
+  if(sectionStep>=0)steps=ls.slice(sectionStep+1).filter(x=>x.length>2);
+  if(!steps.length)steps=ls.filter(x=>!ingredients.includes(x)&&x!==title&&!/^https?:\/\//i.test(x));
+  $("#title").value=title;
+  $("#source").value=url;
+  $("#ingredients").value=ingredients.join("\n");
+  $("#steps").value=steps.join("\n");
+  $("#importText").value=clean;
+  setImportStatus("Gegevens voorbereid. Controleer titel, ingrediënten en bereiding en bewaar het recept.");
+}
+function handleSharedImport(){
+  const p=new URLSearchParams(location.search); if(!p.has("shared"))return;
+  const title=p.get("title")||""; const text=p.get("text")||""; const url=p.get("url")||"";
+  nav("add");
+  fillImportFromText([title,text,url].filter(Boolean).join("\n"),url);
+  history.replaceState({},"",location.pathname+location.hash);
+}
+const oldParseImport=$("#parseImport");
+if(oldParseImport)oldParseImport.onclick=()=>fillImportFromText($("#importText").value);
+const screenshotInput=$("#screenshotInput");
+if(screenshotInput)screenshotInput.addEventListener("change",async()=>{
+  const file=screenshotInput.files?.[0]; if(!file)return;
+  if(!window.Tesseract){setImportStatus("OCR kon niet worden geladen. Controleer je internetverbinding.");return;}
+  setImportStatus("Screenshot wordt gelezen… dit kan even duren.");
+  try{
+    const {data}=await Tesseract.recognize(file,"nld+eng",{logger:m=>{if(m.status==="recognizing text")setImportStatus(`Screenshot lezen… ${Math.round((m.progress||0)*100)}%`);}});
+    fillImportFromText(data.text||"");
+    setImportStatus("Screenshot gelezen. Controleer het resultaat zorgvuldig voordat je bewaart.");
+  }catch(e){console.error(e);setImportStatus("De screenshot kon niet worden gelezen. Probeer een scherpere afbeelding.");}
+  screenshotInput.value="";
+});
+window.addEventListener("load",()=>setTimeout(handleSharedImport,300));

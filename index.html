@@ -60,9 +60,13 @@
       <div class="sectionhead"><div><div class="eyebrow">nieuw</div><h2>Recept toevoegen</h2></div><button class="ghost" data-nav="home">Annuleren</button></div>
       <div class="importbox">
         <strong>Snelle import</strong>
-        <p>Plak een link, tekst of de beschrijving van een Instagram/Facebook/TikTok/YouTube-recept. In deze eerste versie zetten we de inhoud klaar als recept; de AI-import komt in de volgende stap.</p>
+        <p>Deel een recept vanuit je browser of sociale app naar <b>Mijn Kookboek</b>, of plak tekst/een link hieronder.</p>
         <textarea id="importText" rows="6" placeholder="Plak hier een recept, caption, URL of transcript..."></textarea>
-        <button id="parseImport" class="primary wide">Maak recept uit deze tekst</button>
+        <div class="formactions">
+          <button id="parseImport" class="primary">Maak recept uit tekst</button>
+          <label class="ghost filebutton">📷 Screenshot lezen<input id="screenshotInput" type="file" accept="image/*" capture="environment" hidden></label>
+        </div>
+        <p id="importStatus" class="hint"></p>
       </div>
       <form id="recipeForm" class="form">
         <input type="hidden" id="editId">
@@ -90,6 +94,7 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script src="config.js"></script>
   <script src="app.js"></script>
 </body>
