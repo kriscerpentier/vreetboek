@@ -1,3 +1,9 @@
+
+// v5: Android Web Share Target receiver
+function getSharedInput(){const p=new URLSearchParams(location.search);const url=p.get("url")||"",text=p.get("text")||"",title=p.get("title")||"";if(!url&&!text&&!title)return null;return{url,text,title};}
+function showSharedImport(){const d=getSharedInput();if(!d)return;const value=d.url||d.text||"";window.__sharedRecipe=d;window.dispatchEvent(new CustomEvent("shared-recipe",{detail:d}));try{history.replaceState({},document.title,location.pathname)}catch(e){}}
+window.addEventListener("DOMContentLoaded",()=>setTimeout(showSharedImport,300));
+
 const { createClient } = window.supabase;
 const cfg = window.SUPABASE_CONFIG || {};
 const supabaseReady = cfg.url && cfg.anonKey && !cfg.url.includes("JOUW-PROJECT") && !cfg.anonKey.includes("JOUW-PUBLIEKE");
