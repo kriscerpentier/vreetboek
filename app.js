@@ -165,12 +165,35 @@ function fillImportFromText(raw, sharedUrl=""){
   $("#importText").value=clean;
   setImportStatus("Gegevens voorbereid. Controleer titel, ingrediënten en bereiding en bewaar het recept.");
 }
+async function importRecipeUrl(url){
+  if(!url) return;
+  setImportStatus("Receptpagina wordt gelezen…");
+  try{
+    const {data,error}=await sb.functions.invoke("import-recipe",{body:{url}});
+    if(error) throw error;
+    if(data?.error) throw new Error(data.error);
+    nav("add");
+    $("#title").value=data.title||"Nieuw recept";
+    $("#source").value=data.source||url;
+    $("#servings").value=data.servings||4;
+    $("#time").value=data.time||0;
+    $("#ingredients").value=(data.ingredients||[]).join("\n");
+    $("#steps").value=(data.steps||[]).join("\n");
+    $("#notes").value=data.image?`Foto: ${data.image}`:"";
+    $("#importText").value=url;
+    setImportStatus("Recept geïmporteerd. Controleer het even en klik daarna op ‘Recept bewaren’.");
+  }catch(e){
+    console.error(e);
+    setImportStatus("Import mislukt: "+(e.message||e));
+    alert("Import mislukt. "+(e.message||e));
+  }
+}
 function handleSharedImport(){
   const p=new URLSearchParams(location.search); if(!p.has("shared"))return;
   const title=p.get("title")||""; const text=p.get("text")||""; const url=p.get("url")||"";
-  nav("add");
-  fillImportFromText([title,text,url].filter(Boolean).join("\n"),url);
   history.replaceState({},"",location.pathname+location.hash);
+  if(url){ importRecipeUrl(url); }
+  else { nav("add"); fillImportFromText([title,text].filter(Boolean).join("\n")); }
 }
 const oldParseImport=$("#parseImport");
 if(oldParseImport)oldParseImport.onclick=()=>fillImportFromText($("#importText").value);
