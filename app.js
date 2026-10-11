@@ -169,19 +169,52 @@ async function importRecipeUrl(url){
   if(!url) return;
   setImportStatus("Receptpagina wordt gelezen…");
   try{
+    if(!sb || !currentUser) throw new Error("Log eerst in om een recept te importeren.");
     const {data,error}=await sb.functions.invoke("import-recipe",{body:{url}});
     if(error) throw error;
     if(data?.error) throw new Error(data.error);
-    nav("add");
-    $("#title").value=data.title||"Nieuw recept";
-    $("#source").value=data.source||url;
-    $("#servings").value=data.servings||4;
-    $("#time").value=data.time||0;
-    $("#ingredients").value=(data.ingredients||[]).join("\n");
-    $("#steps").value=(data.steps||[]).join("\n");
-    $("#imageUrl").value=data.image||"";
-    $("#importText").value=url;
-    setImportStatus("Recept geïmporteerd. Controleer het even en klik daarna op ‘Recept bewaren’.");
+
+    // Save the import as a real recipe card immediately, even if the platform
+    // provides only a title/photo/link. Re-importing the same URL opens the
+    // existing card instead of creating duplicates.
+    const source = data.source || url;
+    const existing = state.recipes.find(r => (r.source || "").split("?")[0] === source.split("?")[0]);
+    const title = (data.title || "").trim() || "Recept van sociale media";
+    const ingredients = Array.isArray(data.ingredients) ? data.ingredients.filter(Boolean) : [];
+    const steps = Array.isArray(data.steps) ? data.steps.filter(Boolean) : [];
+    let notes = String(data.notes || "").trim();
+    if (!ingredients.length || !steps.length) {
+      const reminder = "STATUS: Nog aan te vullen. Controleer de originele video/link en vul ontbrekende ingrediënten en bereidingswijze aan.";
+      if (!notes.includes("STATUS: Nog aan te vullen")) notes = notes ? reminder + "\n\n" + notes : reminder;
+    }
+    const recipe = {
+      id: existing?.id || crypto.randomUUID(),
+      title,
+      category: data.category || "Andere",
+      servings: Number(data.servings) || 4,
+      time: Number(data.time) || 0,
+      source,
+      image_url: data.image || existing?.image_url || "",
+      ingredients: ingredients.length ? ingredients : (existing?.ingredients || []),
+      steps: steps.length ? steps : (existing?.steps || []),
+      notes: notes || existing?.notes || "",
+      favorite: existing?.favorite || false,
+      done: existing?.done || false
+    };
+    state.recipes = existing
+      ? state.recipes.map(r => r.id === existing.id ? recipe : r)
+      : [recipe, ...state.recipes];
+    localSave();
+    await saveAndSync();
+    nav("home");
+    renderHome();
+    openDetail(recipe.id);
+    setImportStatus((!ingredients.length || !steps.length)
+      ? "De link is als receptkaart bewaard. Het recept moet nog worden aangevuld."
+      : "Het recept is geïmporteerd en bewaard.");
+    if (!ingredients.length || !steps.length) {
+      alert("De link is nu als recept bewaard in je kookboek. Facebook/Instagram gaf niet alle receptgegevens vrij; vul de ontbrekende ingrediënten en bereiding aan via ‘Bewerken’.");
+    }
   }catch(e){
     console.error(e);
     setImportStatus("Import mislukt: "+(e.message||e));
