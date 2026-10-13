@@ -144,26 +144,66 @@ authInit();
 // --- Import v3: Web Share Target, URL/text parsing and screenshot OCR ---
 function setImportStatus(msg){const e=$("#importStatus");if(e)e.textContent=msg||"";}
 function fillImportFromText(raw, sharedUrl=""){
-  const t=(raw||"").trim(); if(!t && !sharedUrl)return;
-  const url=(sharedUrl || (t.match(/https?:\/\/[^\s<>]+/i)||[""])[0]).trim();
-  let clean=t.replace(url,"").trim();
-  const ls=clean.split(/\n+/).map(x=>x.trim()).filter(Boolean);
-  const title=(ls.find(x=>!/^https?:\/\//i.test(x) && x.length>2)||"Nieuw recept").replace(/^#+\s*/,"").slice(0,100);
-  const ingredientRe=/^(?:[-•*]\s*)?(?:\d+(?:[.,]\d+)?\s*(?:x|g|kg|mg|ml|cl|dl|l|el|tl|eetlepel|theelepel|st|stuk|stuks|teentje|teentjes|snuf(?:je)?|pak|blik|zak|bos|handvol)\b|\d+(?:[.,]\d+)?\s*\S+)/i;
-  const sectionIng=ls.findIndex(x=>/^(ingrediënten|ingredients)\s*:??$/i.test(x));
-  const sectionStep=ls.findIndex(x=>/^(bereiding|bereidingswijze|instructies|instructions|method|methode)\s*:??$/i.test(x));
+  const original=(raw||"").replace(/\r/g,"");
+  const t=original.trim(); if(!t && !sharedUrl)return;
+  const foundUrl=sharedUrl || (t.match(/https?:\/\/[^\s<>]+/i)||[""])[0];
+  const url=String(foundUrl||"").trim().replace(/[),.;]+$/,"");
+  const clean=t.replace(url,"").trim();
+  const ls=clean.split(/\n+/).map(x=>x.replace(/\s+/g," ").trim()).filter(Boolean);
+  const norm=x=>x.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  const isIngHeading=x=>/\bingredient(?:en|s)?\b/i.test(norm(x));
+  const isStepHeading=x=>/\b(bereiding|bereidingswijze|instructies|instructions|method|methode|werkwijze)\b/i.test(norm(x));
+  const isNutrition=x=>/\b(voedingswaard|kcal|calorie|eiwit|koolhydr|vet per portie)\b/i.test(norm(x));
+  const isSocial=x=>/\b(volgend|volgen|originele audio|repost|miljoen views|vind ik leuk|opmerking|delen|bewaar|facebook|instagram|tiktok|jasper slock|reageer hieronder|stuur ik jou|gratis training|persoonlijke doel)\b/i.test(norm(x));
+  const ingredientRe=/^(?:[-•*–]\s*)?(?:\d+(?:[.,]\d+)?\s*(?:x|g|kg|mg|ml|cl|dl|l|el|tl|eetlepel|theelepel|st|stuk|stuks|teentje|teentjes|snuf(?:je)?|pak|blik|zak|bos|handvol|gram|liter|porties?)\b|\d+(?:[.,]\d+)?\s+\S+)/i;
+  const sectionIng=ls.findIndex(x=>isIngHeading(x));
+  const sectionStep=ls.findIndex(x=>isStepHeading(x));
   let ingredients=[];
-  if(sectionIng>=0){const end=sectionStep>sectionIng?sectionStep:ls.length;ingredients=ls.slice(sectionIng+1,end).filter(x=>x.length>1);}
-  if(!ingredients.length)ingredients=ls.filter(x=>ingredientRe.test(x)).slice(0,30);
+  if(sectionIng>=0){
+    const end=sectionStep>sectionIng?sectionStep:ls.length;
+    ingredients=ls.slice(sectionIng+1,end)
+      .map(x=>x.replace(/^[☑✅✓✔️\s]+/,"").trim())
+      .filter(x=>ingredientRe.test(x) && !isNutrition(x) && !isSocial(x));
+  }
+  if(!ingredients.length) ingredients=ls.filter(x=>ingredientRe.test(x)&&!isNutrition(x)&&!isSocial(x)).slice(0,40);
+
   let steps=[];
-  if(sectionStep>=0)steps=ls.slice(sectionStep+1).filter(x=>x.length>2);
-  if(!steps.length)steps=ls.filter(x=>!ingredients.includes(x)&&x!==title&&!/^https?:\/\//i.test(x));
-  $("#title").value=title;
-  $("#source").value=url;
-  $("#ingredients").value=ingredients.join("\n");
-  $("#steps").value=steps.join("\n");
-  $("#importText").value=clean;
-  setImportStatus("Gegevens voorbereid. Controleer titel, ingrediënten en bereiding en bewaar het recept.");
+  if(sectionStep>=0){
+    steps=ls.slice(sectionStep+1)
+      .filter(x=>/^(?:\d+[.)]\s*|[-•]\s*)/.test(x))
+      .map(x=>x.replace(/^[☑✅✓✔️\s]+/,"").replace(/^\d+[.)]\s*/,"").trim())
+      .filter(x=>x.length>3&&!isNutrition(x)&&!isSocial(x));
+  }
+  if(!steps.length && sectionStep>=0){
+    steps=ls.slice(sectionStep+1).filter(x=>x.length>8&&!isNutrition(x)&&!isSocial(x)&&!ingredientRe.test(x));
+  }
+
+  const titleCandidates=ls.filter(x=>{
+    const n=norm(x);
+    return x.length>3 && x.length<70 && !/^https?:\/\//i.test(x) &&
+      !isIngHeading(x) && !isStepHeading(x) && !ingredientRe.test(x) &&
+      !isNutrition(x) && !isSocial(x) &&
+      !/\b(porties|kcal|minuten|volg|delen|reageren|facebook|instagram)\b/i.test(n);
+  });
+  let title=titleCandidates.find(x=>/\b(pasta bake|pasta ovenschotel|lasagne|curry|soep|salade|cake|taart|brownies|wraps|taco|kip|gehakt|zalm|ovenschotel|pasta|brood|koekjes)\b/i.test(norm(x)));
+  if(!title) title=titleCandidates[0]||"Nieuw recept";
+  title=title.replace(/^[#•\s]+/,"").replace(/[☑✅✓✔️]/g,"").trim().slice(0,100);
+
+  const servingsMatch=clean.match(/(\d+)\s*porties/i);
+  const timeMatches=[...clean.matchAll(/\b(\d+)\s*(?:minuten|min)\b/gi)].map(m=>Number(m[1]));
+  const time=timeMatches.length?Math.max(...timeMatches):0;
+  const notes=[];
+  if(!ingredients.length) notes.push("STATUS: Nog aan te vullen — controleer de ingrediënten.");
+  if(!steps.length) notes.push("STATUS: Nog aan te vullen — controleer de bereidingswijze.");
+  if($("#title")) $("#title").value=title;
+  if($("#source")) $("#source").value=url;
+  if($("#servings")) $("#servings").value=servingsMatch?Number(servingsMatch[1]):4;
+  if($("#time")) $("#time").value=time;
+  if($("#ingredients")) $("#ingredients").value=ingredients.join("\n");
+  if($("#steps")) $("#steps").value=steps.map((x,i)=>`${i+1}. ${x}`).join("\n");
+  if($("#notes") && notes.length) $("#notes").value=notes.join("\n");
+  if($("#importText")) $("#importText").value=clean;
+  setImportStatus(`Tekst verwerkt: ${ingredients.length} ingrediënten en ${steps.length} bereidingsstappen gevonden. Controleer alles en klik op ‘Recept bewaren’.`);
 }
 async function importRecipeUrl(url){
   if(!url) return;
@@ -232,14 +272,21 @@ const oldParseImport=$("#parseImport");
 if(oldParseImport)oldParseImport.onclick=()=>fillImportFromText($("#importText").value);
 const screenshotInput=$("#screenshotInput");
 if(screenshotInput)screenshotInput.addEventListener("change",async()=>{
-  const file=screenshotInput.files?.[0]; if(!file)return;
+  const files=Array.from(screenshotInput.files||[]); if(!files.length)return;
   if(!window.Tesseract){setImportStatus("OCR kon niet worden geladen. Controleer je internetverbinding.");return;}
-  setImportStatus("Screenshot wordt gelezen… dit kan even duren.");
+  const sourceMatch=($("#importText").value.match(/https?:\/\/[^\s<>]+/i)||[""])[0];
+  const extracted=[];
   try{
-    const {data}=await Tesseract.recognize(file,"nld+eng",{logger:m=>{if(m.status==="recognizing text")setImportStatus(`Screenshot lezen… ${Math.round((m.progress||0)*100)}%`);}});
-    fillImportFromText(data.text||"");
-    setImportStatus("Screenshot gelezen. Controleer het resultaat zorgvuldig voordat je bewaart.");
-  }catch(e){console.error(e);setImportStatus("De screenshot kon niet worden gelezen. Probeer een scherpere afbeelding.");}
+    for(let i=0;i<files.length;i++){
+      setImportStatus(`Screenshot ${i+1} van ${files.length} wordt gelezen… dit kan even duren.`);
+      const {data}=await Tesseract.recognize(files[i],"nld+eng",{logger:m=>{
+        if(m.status==="recognizing text")setImportStatus(`Screenshot ${i+1}/${files.length} lezen… ${Math.round((m.progress||0)*100)}%`);
+      }});
+      if(data?.text)extracted.push(data.text);
+    }
+    fillImportFromText(extracted.join("\n"),sourceMatch);
+    setImportStatus(`${files.length} screenshot(s) gelezen. Controleer titel, ingrediënten en bereiding vóór je bewaart.`);
+  }catch(e){console.error(e);setImportStatus("De screenshot(s) konden niet volledig worden gelezen. Probeer scherpere afbeeldingen.");}
   screenshotInput.value="";
 });
 window.addEventListener("load",()=>setTimeout(handleSharedImport,300));
